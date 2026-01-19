@@ -1,10 +1,8 @@
 import boto3
-
-import boto3
 from boto3.dynamodb.conditions import Key, Attr
 
-dynamodb = boto3.resource("dynamodb")
-guild_info_table = dynamodb.Table("skinsbot.guild_info")
+dynamodb_client = boto3.resource("dynamodb")
+guild_info_table = dynamodb_client.Table("skinsbot.guild_info")
 
 
 def add_guild_to_db(guild_id: int) -> None:
