@@ -1,23 +1,25 @@
 import requests
 import time
-from urllib.parse import quote, unquote
+from urllib.parse import quote
 
 APP_ID = 730  # CS2 app id
 USD_ID = 1
 
 
-def get_hash_name_from_message(message: str, quote_steam_url=False) -> str:
-    # function to check if message is like the url below
-    # url_example = "https://steamcommunity.com/market/listings/730/{anything_here}"
-    steam_market_url = "steamcommunity.com/market/listings/730/"
-    if steam_market_url in message:
-        hash_name = message.split(steam_market_url, 1)[1]
-        if quote_steam_url:
-            hash_name = quote(hash_name)
-    else:
-        hash_name = quote(message)
+def iter_hash_name_candidates(message: str):
+    STEAM_MARKET_PREFIX = "steamcommunity.com/market/listings/730/"
+    if STEAM_MARKET_PREFIX in message:
+        raw = message.split(STEAM_MARKET_PREFIX, 1)[1]
+        # Don't escape '%': if the URL already has '%20'/'%7C', we avoid double-encoding. Assumes '%' means "already encoded"; would break if an item name ever contains a literal '%'.
+        quoted = quote(raw, safe="%")
 
-    return hash_name
+        # Try "as-is" first, then quoted only if it changes anything
+        yield raw
+        if quoted != raw:
+            yield quoted
+    else:
+        # For plain skin names, just quote once (no second request)
+        yield quote(message)
 
 
 def get_listings(hash_name: str) -> dict:
@@ -53,19 +55,18 @@ def response_has_active_listings(get_listings_response: dict) -> bool:
     return True
 
 
-def validate_skin_from_message(message: str) -> bool:
-    """
-    Return whether the Steam Market item in `message` has active listings.
+def validate_skin_from_message(message: str) -> dict:
+    candidates = list(iter_hash_name_candidates(message))
 
-    Tries once assuming the URL is already quoted; if no listings are found, retries
-    once with quoting enabled.
-    """
-    for quote_enabled in (False, True):
-        hash_name = get_hash_name_from_message(message, quote_steam_url=quote_enabled)
+    for i, hash_name in enumerate(candidates):
         resp = get_listings(hash_name)
         if response_has_active_listings(resp):
             return {"is_valid": True, "hash_name": hash_name}
-        time.sleep(1)  # avoid making 2 requests too fast
+
+        # only sleep if we're actually going to make another request
+        if i < len(candidates) - 1:
+            time.sleep(1)
+
     return {"is_valid": False}
 
 
