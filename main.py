@@ -22,21 +22,21 @@ bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
 
 
 @bot.event
-async def on_ready():
+async def on_ready() -> None:
     print(f"Logged in as {bot.user.name} - {bot.user.id}")
     print("------")
     return
 
 
 @bot.event
-async def on_guild_join(guild: discord.Guild):
+async def on_guild_join(guild: discord.Guild) -> None:
     await asyncio.to_thread(add_guild_to_db, guild.id)
     print(f"Bot joined guild {guild.id}")
     return
 
 
 @bot.command()
-async def set_skinsbot_channel(ctx: commands.Context):
+async def set_skinsbot_channel(ctx: commands.Context) -> None:
     guild_obj = ctx.guild
     channel_obj = ctx.channel
     try:
@@ -51,7 +51,7 @@ async def set_skinsbot_channel(ctx: commands.Context):
 
 
 @bot.command()
-async def add_skin(ctx: commands.Context):
+async def add_skin(ctx: commands.Context) -> None:
     channel_obj = ctx.channel
     head = f"{ctx.prefix}{ctx.invoked_with}"
     message = ctx.message.content[len(head) :].strip()
@@ -75,7 +75,7 @@ async def add_skin(ctx: commands.Context):
 
 
 @bot.command()
-async def formatting_help(ctx: commands.Context):
+async def formatting_help(ctx: commands.Context) -> None:
     channel_obj = ctx.channel
     await channel_obj.send(
         "Skin formatting help\n\n"

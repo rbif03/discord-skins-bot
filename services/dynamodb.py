@@ -7,7 +7,7 @@ dynamodb = boto3.resource("dynamodb")
 guild_info_table = dynamodb.Table("skinsbot.guild_info")
 
 
-def add_guild_to_db(guild_id: int):
+def add_guild_to_db(guild_id: int) -> None:
     # Checks if guild is already in DB, if not, adds it
     response = guild_info_table.query(
         KeyConditionExpression=Key("guild_id").eq(guild_id)
@@ -17,7 +17,7 @@ def add_guild_to_db(guild_id: int):
         guild_info_table.put_item(Item={"guild_id": guild_id})
 
 
-def update_guild_channel(guild_id: int, channel_id: int):
+def update_guild_channel(guild_id: int, channel_id: int) -> None:
     add_guild_to_db(guild_id)  # if the guild isn't in DB for some reason, adds it
 
     guild_info_table.update_item(
