@@ -1,4 +1,5 @@
 import requests
+import time
 from urllib.parse import quote, unquote
 
 APP_ID = 730  # CS2 app id
@@ -64,6 +65,7 @@ def validate_skin_from_message(message: str) -> bool:
         resp = get_listings(hash_name)
         if response_has_active_listings(resp):
             return {"is_valid": True, "hash_name": hash_name}
+        time.sleep(1)  # avoid making 2 requests too fast
     return {"is_valid": False}
 
 

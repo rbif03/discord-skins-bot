@@ -58,22 +58,50 @@ async def add_skin(ctx: commands.Context):
     skin_is_valid_dict = await asyncio.to_thread(validate_skin_from_message, message)
     if skin_is_valid_dict.get("is_valid"):
         unquoted_hash_name = unquote(skin_is_valid_dict.get("hash_name"))
+        # TODO: create a separate python file that renders these messages
         await channel_obj.send(
             f":white_check_mark: Successfully added `{unquoted_hash_name}` to tracked skins!"
         )
     else:
+        # TODO: create a separate python file that renders these messages
         await channel_obj.send(
-            """:cross_mark: No active listings found for that skin.
-
-            1) Check the spelling, or try adding wear (e.g. Field-Tested).
-            2) If it's extremely rare, it may not be trackable.
-
-            Examples:
-            - `AWP | Safari Mesh (Field-Tested)`
-            - `https://steamcommunity.com/market/listings/730/StatTrak%E2%84%A2%20AUG%20%7C%20Triqua%20%28Well-Worn%29`
-
-            Need help? Type `->format`."""
+            f":cross_mark: No active listings found for that skin.\n"
+            "This usually means:\n"
+            f"1) The name is misspelled (see `{COMMAND_PREFIX}formatting_help`).\n"
+            "2) The skin is too rare to track reliably."
         )
+
+    return
+
+
+@bot.command()
+async def formatting_help(ctx: commands.Context):
+    channel_obj = ctx.channel
+    await channel_obj.send(
+        "Skin formatting help\n\n"
+        "You can provide a skin in 2 ways:\n\n"
+        "1) Skin name (recommended)\n"
+        "Use this exact pattern:\n"
+        "WEAPON | SKIN NAME (WEAR)\n\n"
+        "Examples:\n"
+        "`AWP | Safari Mesh (Field-Tested)`\n"
+        "`AK-47 | Redline (Minimal Wear)`\n"
+        "`Glock-18 | Water Elemental (Factory New)`\n\n"
+        "Wear must be one of:\n"
+        "`Factory New`, `Minimal Wear`, `Field-Tested`, `Well-Worn`, `Battle-Scarred`\n\n"
+        "2) Steam Market link\n"
+        "Paste the full listing URL, like:\n"
+        "`https://steamcommunity.com/market/listings/730/StatTrak%E2%84%A2%20AUG%20%7C%20Triqua%20%28Well-Worn%29`\n\n"
+        "Tips:\n"
+        "- Include the wear in parentheses. It matters.\n"
+        "- Keep the | between weapon and skin name.\n"
+        "- Copy and paste from Steam if possible to avoid typos.\n"
+        "- Some skins may be too rare and have no active listings.\n\n"
+        f"Example usage:\n"
+        f"{COMMAND_PREFIX}add_skin AWP | Safari Mesh (Field-Tested)\n"
+        f"{COMMAND_PREFIX}add_skin `https://steamcommunity.com/market/listings/730/...`"
+    )
+    return
 
 
 bot.run(DISCORD_TOKEN)
