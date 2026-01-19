@@ -5,7 +5,11 @@ import discord
 from discord.ext import commands, tasks
 
 import config
-from services.dynamodb import add_guild_to_db, update_guild_channel
+from services.dynamodb import (
+    add_guild_to_db,
+    update_guild_channel,
+    add_to_tracked_skins,
+)
 from services.ssm import get_parameter
 from utils.validate_skin import validate_skin_from_message
 
@@ -52,13 +56,16 @@ async def set_skinsbot_channel(ctx: commands.Context) -> None:
 
 @bot.command()
 async def add_skin(ctx: commands.Context) -> None:
+    guild_obj = ctx.guild
     channel_obj = ctx.channel
     head = f"{ctx.prefix}{ctx.invoked_with}"
     message = ctx.message.content[len(head) :].strip()
     skin_is_valid_dict = await asyncio.to_thread(validate_skin_from_message, message)
+    hash_name = skin_is_valid_dict.get("hash_name")
     if skin_is_valid_dict.get("is_valid"):
-        unquoted_hash_name = unquote(skin_is_valid_dict.get("hash_name"))
-        # TODO: create a separate python file that renders these messages
+        await asyncio.to_thread(add_to_tracked_skins, guild_obj.id, hash_name)
+
+        unquoted_hash_name = unquote(hash_name)
         await channel_obj.send(
             f":white_check_mark: Successfully added `{unquoted_hash_name}` to tracked skins!"
         )
