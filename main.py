@@ -4,14 +4,21 @@ from urllib.parse import unquote
 import discord
 from discord.ext import commands, tasks
 
+
 import config
 from services.dynamodb import (
     add_guild_to_db,
     update_guild_channel,
     add_to_tracked_skins,
+    SkinAlreadyTrackedException,
+    TrackedSkinsLimitExceededError,
 )
 from services.ssm import get_parameter
-from utils.validate_skin import validate_skin_from_message
+from utils.render_messages import (
+    render_formatting_help_msg,
+    render_no_active_listings_msg,
+)
+from utils.validate_skin import get_SkinValidator_obj
 
 
 intents = discord.Intents.default()
@@ -60,23 +67,33 @@ async def add_skin(ctx: commands.Context) -> None:
     channel_obj = ctx.channel
     head = f"{ctx.prefix}{ctx.invoked_with}"
     message = ctx.message.content[len(head) :].strip()
-    skin_is_valid_dict = await asyncio.to_thread(validate_skin_from_message, message)
-    hash_name = skin_is_valid_dict.get("hash_name")
-    if skin_is_valid_dict.get("is_valid"):
-        await asyncio.to_thread(add_to_tracked_skins, guild_obj.id, hash_name)
+    SkinValidator_obj = await asyncio.to_thread(
+        get_SkinValidator_obj, message, COMMAND_PREFIX
+    )
+    if SkinValidator_obj.validation_status == "error":
+        await channel_obj.send(SkinValidator_obj.message)
+        return
 
-        unquoted_hash_name = unquote(hash_name)
+    # At this point, we know the skin name is valid
+    hash_name = SkinValidator_obj.hash_name
+    try:
+        await asyncio.to_thread(add_to_tracked_skins, guild_obj.id, hash_name)
+    except SkinAlreadyTrackedException:
+        await channel_obj.send(":cross_mark: That skin is already being tracked!")
+        return
+    except TrackedSkinsLimitExceededError:
         await channel_obj.send(
-            f":white_check_mark: Successfully added `{unquoted_hash_name}` to tracked skins!"
+            ":cross_mark: Tracking limit reached for this server. Remove a tracked skin before adding another."
         )
-    else:
-        # TODO: create a separate python file that renders these messages
-        await channel_obj.send(
-            f":cross_mark: No active listings found for that skin.\n"
-            "This usually means:\n"
-            f"1) The name is misspelled (see `{COMMAND_PREFIX}formatting_help`).\n"
-            "2) The skin is too rare to track reliably."
-        )
+        return
+    except Exception as e:
+        await channel_obj.send(f":cross_mark: Failed to add skin to the database. {e}")
+        return
+
+    unquoted_hash_name = unquote(hash_name)
+    await channel_obj.send(
+        f":white_check_mark: Successfully added `{unquoted_hash_name}` to tracked skins!"
+    )
 
     return
 
@@ -84,30 +101,7 @@ async def add_skin(ctx: commands.Context) -> None:
 @bot.command()
 async def formatting_help(ctx: commands.Context) -> None:
     channel_obj = ctx.channel
-    await channel_obj.send(
-        "Skin formatting help\n\n"
-        "You can provide a skin in 2 ways:\n\n"
-        "1) Skin name (recommended)\n"
-        "Use this exact pattern:\n"
-        "WEAPON | SKIN NAME (WEAR)\n\n"
-        "Examples:\n"
-        "`AWP | Safari Mesh (Field-Tested)`\n"
-        "`AK-47 | Redline (Minimal Wear)`\n"
-        "`Glock-18 | Water Elemental (Factory New)`\n\n"
-        "Wear must be one of:\n"
-        "`Factory New`, `Minimal Wear`, `Field-Tested`, `Well-Worn`, `Battle-Scarred`\n\n"
-        "2) Steam Market link\n"
-        "Paste the full listing URL, like:\n"
-        "`https://steamcommunity.com/market/listings/730/StatTrak%E2%84%A2%20AUG%20%7C%20Triqua%20%28Well-Worn%29`\n\n"
-        "Tips:\n"
-        "- Include the wear in parentheses. It matters.\n"
-        "- Keep the | between weapon and skin name.\n"
-        "- Copy and paste from Steam if possible to avoid typos.\n"
-        "- Some skins may be too rare and have no active listings.\n\n"
-        f"Example usage:\n"
-        f"{COMMAND_PREFIX}add_skin AWP | Safari Mesh (Field-Tested)\n"
-        f"{COMMAND_PREFIX}add_skin `https://steamcommunity.com/market/listings/730/...`"
-    )
+    await channel_obj.send(render_formatting_help_msg(COMMAND_PREFIX))
     return
 
 

@@ -6,14 +6,22 @@ guild_info_table = dynamodb_client.Table("skinsbot.guild_info")
 tracked_skins_table = dynamodb_client.Table("skinsbot.tracked_skins")
 
 
+class SkinAlreadyTrackedException(Exception):
+    pass
+
+
+class TrackedSkinsLimitExceededError(Exception):
+    pass
+
+
 def add_guild_to_db(guild_id: int) -> None:
     # Checks if guild is already in DB, if not, adds it
-    response = guild_info_table.query(
+    response: dict = guild_info_table.query(
         KeyConditionExpression=Key("guild_id").eq(guild_id)
     )
 
     if not response.get("Items"):
-        guild_info_table.put_item(Item={"guild_id": guild_id})
+        guild_info_table.put_item(Item={"guild_id": guild_id, "max_tracked_skins": 10})
 
 
 def update_guild_channel(guild_id: int, channel_id: int) -> None:
@@ -26,22 +34,39 @@ def update_guild_channel(guild_id: int, channel_id: int) -> None:
     )
 
 
-def add_to_tracked_skins(guild_id: int, hash_name: str) -> None:
-    response = tracked_skins_table.query(
+def get_guild_tracked_hash_names(guild_id: int) -> list[str]:
+    response: dict = tracked_skins_table.query(
         KeyConditionExpression=Key("guild_id").eq(guild_id)
     )
     guild_tracked_hash_names = [
         d.get("hash_name") for d in response.get("Items") if d.get("hash_name")
     ]
+    return guild_tracked_hash_names
 
-    if hash_name not in guild_tracked_hash_names:
-        tracked_skins_table.put_item(
-            Item={"guild_id": guild_id, "hash_name": hash_name}
-        )
-        return
+
+def get_guild_max_tracked_skins(guild_id: int) -> int:
+    response: dict = guild_info_table.query(
+        KeyConditionExpression=Key("guild_id").eq(guild_id)
+    )
+    if response.get("Items"):
+        max_tracked_skins = response.get("Items")[0].get("max_tracked_skins")
+        return max_tracked_skins
+
+    return 0  # This is for a guild_id that is not in the db
+
+
+def add_to_tracked_skins(guild_id: int, hash_name: str) -> None:
+    guild_tracked_hash_names = get_guild_tracked_hash_names(guild_id)
+    if hash_name in guild_tracked_hash_names:
+        raise SkinAlreadyTrackedException
+
+    max_tracked_skins = get_guild_max_tracked_skins(guild_id)
+    if len(guild_tracked_hash_names) >= max_tracked_skins:
+        raise TrackedSkinsLimitExceededError
+
+    tracked_skins_table.put_item(Item={"guild_id": guild_id, "hash_name": hash_name})
+    return
 
 
 if __name__ == "__main__":
-    response = tracked_skins_table.query(KeyConditionExpression=Key("guild_id").eq(13))
-
-    print(response.get("Items"))
+    get_guild_max_tracked_skins(470359666828771328)
