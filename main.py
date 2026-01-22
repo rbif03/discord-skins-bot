@@ -1,5 +1,5 @@
 import asyncio
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 import discord
 from discord.ext import commands, tasks
@@ -10,6 +10,9 @@ from services.dynamodb import (
     add_guild_to_db,
     update_guild_channel,
     try_except_add_to_tracked_skins,
+    get_tracked_hash_names,
+    delete_tracked_skin,
+    SkinNotTrackedException,
 )
 from services.ssm import get_parameter
 from utils.render_messages import (
@@ -94,6 +97,49 @@ async def add_skin(ctx: commands.Context) -> None:
 async def formatting_help(ctx: commands.Context) -> None:
     channel_obj = ctx.channel
     await channel_obj.send(render_formatting_help_msg(COMMAND_PREFIX))
+    return
+
+
+@bot.command()
+async def tracked_skins(ctx: commands.Context) -> None:
+    guild_obj = ctx.guild
+    channel_obj = ctx.channel
+    try:
+        hash_names = await asyncio.to_thread(get_tracked_hash_names, guild_obj.id)
+        unquoted_hash_names = [f"`{unquote(skin)}`" for skin in hash_names]
+        if len(hash_names) > 0:
+            await channel_obj.send(
+                f"Tracked skins:\n* " + "\n* ".join(unquoted_hash_names)
+            )
+        else:
+            await channel_obj.send(
+                f":cross_mark: This server has no tracked skins. Use `->add_skin <skin name>`"
+            )
+    except Exception as e:
+        await channel_obj.send(f":cross_mark: Failed to fetch tracked skins.\n{e}")
+
+
+@bot.command()
+async def remove_skin(ctx: commands.Context) -> None:
+    guild_obj = ctx.guild
+    channel_obj = ctx.channel
+    head = f"{ctx.prefix}{ctx.invoked_with}"
+    message = ctx.message.content[len(head) :].strip()
+    hash_name = quote(message)
+    try:
+        await asyncio.to_thread(delete_tracked_skin, guild_obj.id, hash_name)
+        await channel_obj.send(
+            f":white_check_mark: `{message}` removed from tracked skins!"
+        )
+    except SkinNotTrackedException:
+        await channel_obj.send(
+            f":cross_mark: {message}is not currently tracked. Use->tracked_skins to view tracked skins."
+        )
+    except Exception as e:
+        await channel_obj.send(
+            f":cross_mark: Couldn't delete the skin. Try again later. ({e})"
+        )
+
     return
 
 

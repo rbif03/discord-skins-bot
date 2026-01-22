@@ -1,11 +1,15 @@
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
-
+from botocore.exceptions import ClientError
 from models.validation_response import SkinValidationResponse
 
 dynamodb_client = boto3.resource("dynamodb")
 guild_info_table = dynamodb_client.Table("skinsbot.guild_info")
 tracked_skins_table = dynamodb_client.Table("skinsbot.tracked_skins")
+
+
+class SkinNotTrackedException(Exception):
+    pass
 
 
 class SkinAlreadyTrackedException(Exception):
@@ -70,7 +74,9 @@ def add_to_tracked_skins(guild_id: int, hash_name: str) -> None:
     return
 
 
-def try_except_add_to_tracked_skins(guild_id: int, hash_name: str):
+def try_except_add_to_tracked_skins(
+    guild_id: int, hash_name: str
+) -> SkinValidationResponse:
     try:
         add_to_tracked_skins(guild_id, hash_name)
         return SkinValidationResponse(
@@ -91,5 +97,30 @@ def try_except_add_to_tracked_skins(guild_id: int, hash_name: str):
         )
 
 
+def get_tracked_hash_names(guild_id: int) -> list[str]:
+    response: dict = tracked_skins_table.query(
+        KeyConditionExpression=Key("guild_id").eq(guild_id)
+    )
+    tracked_hash_names = [
+        d.get("hash_name") for d in response.get("Items", []) if d.get("hash_name")
+    ]
+    return sorted(tracked_hash_names)
+
+
+def delete_tracked_skin(guild_id: int, hash_name: str) -> list[str]:
+    try:
+        tracked_skins_table.delete_item(
+            Key={"guild_id": guild_id, "hash_name": hash_name},
+            ConditionExpression="attribute_exists(guild_id) AND attribute_exists(hash_name)",
+        )
+    except ClientError as e:
+        code = e.response["Error"].get("Code")
+        if code == "ConditionalCheckFailedException":
+            raise SkinNotTrackedException
+        else:
+            raise e
+
+
 if __name__ == "__main__":
-    get_guild_max_tracked_skins(470359666828771328)
+    # get_guild_max_tracked_skins(470359666828771328)
+    pass

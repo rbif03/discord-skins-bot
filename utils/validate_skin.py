@@ -22,7 +22,7 @@ class SteamMarketRequestError(Exception):
 
 
 class NoActiveListingsError(Exception):
-    user_messsage = (
+    user_message = (
         f":cross_mark: No active listings found for that skin.\n"
         "This usually means:\n"
         f"1) The name is misspelled (see `->formatting_help`).\n"
@@ -98,8 +98,7 @@ def fetch_listings_or_raise(hash_name: str):
         return get_listings(hash_name)
 
     except (RequestException, JSONDecodeError, UnsuccessfulRequestError) as e:
-        print(str(e))
-        raise SteamMarketRequestError from e
+        raise SteamMarketRequestError(f"{e}") from e
 
 
 def validate_listings_response(hash_name: str, resp) -> SkinValidationResponse:
