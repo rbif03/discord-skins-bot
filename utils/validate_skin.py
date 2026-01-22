@@ -1,25 +1,33 @@
-from dataclasses import dataclass
-from typing import Literal
-
 import requests
 from requests.exceptions import JSONDecodeError, RequestException
 import time
 from urllib.parse import quote, unquote
 
+from models.validation_response import SkinValidationResponse
+
 APP_ID = 730  # CS2 app id
 USD_ID = 1
 
 
-@dataclass
-class SkinValidator:
-    hash_name: str = ""
-    validation_status: Literal["success", "error"]
-    message: str = ""
-    unquoted_hash_name: str = ""
-
-
 class UnsuccessfulRequestError(Exception):
     pass
+
+
+class SteamMarketRequestError(Exception):
+    user_message = (
+        ":cross_mark: Couldn't validate that skin right now.\n"
+        "This is usually a temporary Steam Market/API issue — please try again in a bit.\n"
+        "You can also double-check the spelling/format (see `->formatting_help`)."
+    )
+
+
+class NoActiveListingsError(Exception):
+    user_messsage = (
+        f":cross_mark: No active listings found for that skin.\n"
+        "This usually means:\n"
+        f"1) The name is misspelled (see `->formatting_help`).\n"
+        "2) The skin is too rare to track reliably."
+    )
 
 
 def iter_hash_name_candidates(message: str):
@@ -56,6 +64,8 @@ def get_listings(hash_name: str) -> dict:
     endpoint = f"https://steamcommunity.com/market/listings/{APP_ID}/{hash_name}/render"
     params = {"currency": USD_ID, "start": 0}
     response = requests.get(endpoint, params=params)
+    print(f"requests.get({endpoint})")
+    print(f"params = {params}")
 
     if response.status_code != 200:
         raise UnsuccessfulRequestError(
@@ -71,68 +81,88 @@ def get_listings(hash_name: str) -> dict:
 def response_has_active_listings(get_listings_response_json: dict) -> bool:
     listinginfo = get_listings_response_json.get("listinginfo", {})
     if not listinginfo:
-        return False
+        raise NoActiveListingsError
 
     if not isinstance(listinginfo, dict):
-        return False
+        raise NoActiveListingsError
 
     listing_ids = listinginfo.keys()
     if not listing_ids:
-        return False
+        raise NoActiveListingsError
 
-    return True
+    return listinginfo
 
 
-def get_listings_try_excepts(hash_name: str, command_prefix: str) -> SkinValidator:
+def fetch_listings_or_raise(hash_name: str):
     try:
-        resp = get_listings(hash_name)
+        return get_listings(hash_name)
 
     except (RequestException, JSONDecodeError, UnsuccessfulRequestError) as e:
-        return SkinValidator(
+        print(str(e))
+        raise SteamMarketRequestError from e
+
+
+def validate_listings_response(hash_name: str, resp) -> SkinValidationResponse:
+    try:
+        response_has_active_listings(resp)
+        return SkinValidationResponse(hash_name=hash_name, status="success")
+
+    except NoActiveListingsError as e:
+        return SkinValidationResponse(
             hash_name=hash_name,
-            validation_status="error",
-            message=(
-                ":cross_mark: Couldn't validate that skin right now.\n"
-                "This is usually a temporary Steam Market/API issue — please try again in a bit.\n"
-                f"You can also double-check the spelling/format (see `{command_prefix}formatting_help`)."
-                f"`{e}`"
-            ),
+            status="error",
+            text=e.user_message,
         )
 
-    if not response_has_active_listings(resp):
-        return SkinValidator(
+    except Exception as e:
+        return SkinValidationResponse(
             hash_name=hash_name,
-            validation_status="error",
-            message=(
-                f":cross_mark: No active listings found for that skin.\n"
-                "This usually means:\n"
-                f"1) The name is misspelled (see `{command_prefix}formatting_help`).\n"
-                "2) The skin is too rare to track reliably."
-            ),
+            status="error",
+            text=str(e),
         )
 
-    return SkinValidator(
-        hash_name=hash_name,
-        validation_status="success",
-        unquoted_hash_name=unquote(hash_name),
-    )
+
+def get_listings_try_excepts(hash_name: str) -> SkinValidationResponse:
+    """
+    Orchestrator: fetch then validate, mapping SteamMarketRequestError to user-facing message.
+    """
+    try:
+        resp = fetch_listings_or_raise(hash_name)
+
+        # Exceptions in `validate_listings_response` are handled internally.
+        return validate_listings_response(hash_name, resp)
+
+    # The exceptions below are meant to catch anything raised by fetch_listings_or_raise
+    except SteamMarketRequestError as e:
+        return SkinValidationResponse(
+            hash_name=hash_name,
+            status="error",
+            text=f"{e.user_message}\n{e}",
+        )
+
+    except Exception as e:
+        return SkinValidationResponse(
+            hash_name=hash_name,
+            status="error",
+            text=str(e),
+        )
 
 
-def get_SkinValidator_obj(message: str, command_prefix: str) -> dict:
+def get_SkinValidationResponse(message: str) -> SkinValidationResponse:
     candidates = list(iter_hash_name_candidates(message))
     max_requests_value = len(candidates) - 1
 
     for i, hash_name in enumerate(candidates):
-        SkinValidator_obj = get_listings_try_excepts(hash_name, command_prefix)
+        SkinValidationResponse_obj = get_listings_try_excepts(hash_name)
 
-        if SkinValidator_obj.validation_status == "success":
-            return SkinValidator_obj
+        if SkinValidationResponse_obj.status == "success":
+            return SkinValidationResponse_obj
 
         # only sleep if we're actually going to make another request
         if i < max_requests_value:
-            time.sleep(1)
+            time.sleep(5)
 
-    return SkinValidator_obj
+    return SkinValidationResponse_obj
 
 
 if __name__ == "__main__":

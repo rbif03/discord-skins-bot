@@ -9,16 +9,13 @@ import config
 from services.dynamodb import (
     add_guild_to_db,
     update_guild_channel,
-    add_to_tracked_skins,
-    SkinAlreadyTrackedException,
-    TrackedSkinsLimitExceededError,
+    try_except_add_to_tracked_skins,
 )
 from services.ssm import get_parameter
 from utils.render_messages import (
     render_formatting_help_msg,
-    render_no_active_listings_msg,
 )
-from utils.validate_skin import get_SkinValidator_obj
+from utils.validate_skin import get_SkinValidationResponse
 
 
 intents = discord.Intents.default()
@@ -67,29 +64,24 @@ async def add_skin(ctx: commands.Context) -> None:
     channel_obj = ctx.channel
     head = f"{ctx.prefix}{ctx.invoked_with}"
     message = ctx.message.content[len(head) :].strip()
-    SkinValidator_obj = await asyncio.to_thread(
-        get_SkinValidator_obj, message, COMMAND_PREFIX
+    SkinValidationResponse_obj = await asyncio.to_thread(
+        get_SkinValidationResponse, message
     )
-    if SkinValidator_obj.validation_status == "error":
-        await channel_obj.send(SkinValidator_obj.message)
+    if SkinValidationResponse_obj.status == "error":
+        await channel_obj.send(SkinValidationResponse_obj.text)
         return
 
     # At this point, we know the skin name is valid
-    hash_name = SkinValidator_obj.hash_name
-    try:
-        await asyncio.to_thread(add_to_tracked_skins, guild_obj.id, hash_name)
-    except SkinAlreadyTrackedException:
-        await channel_obj.send(":cross_mark: That skin is already being tracked!")
-        return
-    except TrackedSkinsLimitExceededError:
-        await channel_obj.send(
-            ":cross_mark: Tracking limit reached for this server. Remove a tracked skin before adding another."
-        )
-        return
-    except Exception as e:
-        await channel_obj.send(f":cross_mark: Failed to add skin to the database. {e}")
+    hash_name = SkinValidationResponse_obj.hash_name
+
+    add_to_db_validation_obj = await asyncio.to_thread(
+        try_except_add_to_tracked_skins, guild_obj.id, hash_name
+    )
+    if add_to_db_validation_obj.status == "error":
+        await channel_obj.send(add_to_db_validation_obj.text)
         return
 
+    # At this point add_to_db_validation_obj.status == "success"
     unquoted_hash_name = unquote(hash_name)
     await channel_obj.send(
         f":white_check_mark: Successfully added `{unquoted_hash_name}` to tracked skins!"

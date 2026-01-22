@@ -1,17 +1,19 @@
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 
+from models.validation_response import SkinValidationResponse
+
 dynamodb_client = boto3.resource("dynamodb")
 guild_info_table = dynamodb_client.Table("skinsbot.guild_info")
 tracked_skins_table = dynamodb_client.Table("skinsbot.tracked_skins")
 
 
 class SkinAlreadyTrackedException(Exception):
-    pass
+    user_message = ":cross_mark: That skin is already being tracked!"
 
 
 class TrackedSkinsLimitExceededError(Exception):
-    pass
+    user_message = ":cross_mark: Tracking limit reached for this server. Remove a tracked skin before adding another."
 
 
 def add_guild_to_db(guild_id: int) -> None:
@@ -66,6 +68,27 @@ def add_to_tracked_skins(guild_id: int, hash_name: str) -> None:
 
     tracked_skins_table.put_item(Item={"guild_id": guild_id, "hash_name": hash_name})
     return
+
+
+def try_except_add_to_tracked_skins(guild_id: int, hash_name: str):
+    try:
+        add_to_tracked_skins(guild_id, hash_name)
+        return SkinValidationResponse(
+            hash_name=hash_name,
+            status="success",
+        )
+    except SkinAlreadyTrackedException as e:
+        return SkinValidationResponse(
+            hash_name=hash_name, status="error", text=e.user_message
+        )
+    except TrackedSkinsLimitExceededError as e:
+        return SkinValidationResponse(
+            hash_name=hash_name, status="error", text=e.user_message
+        )
+    except Exception as e:
+        return SkinValidationResponse(
+            hash_name=hash_name, status="error", text=f"DynamoDB (database) error: {e}"
+        )
 
 
 if __name__ == "__main__":
