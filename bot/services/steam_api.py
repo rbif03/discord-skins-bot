@@ -1,4 +1,5 @@
 import requests
+from requests.exceptions import JSONDecodeError
 import json
 import urllib.parse
 from typing import Literal
@@ -47,12 +48,16 @@ def get_market_price_overview(market_hash_name: str):
     url = DEFAULT_URL + path
     url = add_params_to_url(url, params)
     response = requests.get(url)
-    if response.status_code != 200:
-        print(f"HTTP {response.status_code}: {response.text}")
-        return None
-    response_json = response.json()
-    print(response_json)
-    return response_json
+    try:
+        response_json = response.json()
+    except JSONDecodeError:
+        response_json = {}
+
+    return {
+        "status": response.status_code,
+        "body": response_json,
+        "text": response.text,
+    }
 
 
 def get_tags_map(cs2_item: dict):
@@ -90,6 +95,4 @@ def get_inventory_items(steamid: str):
 
 
 if __name__ == "__main__":
-    steamid = "76561198178445962"  # Example SteamID
-    inventory_items = get_inventory_items(steamid)
-    print(json.dumps(inventory_items, indent=4))
+    print(get_market_price_overview("AWP%20%7C%20Redline%20%28Minimal%20Wear%29"))

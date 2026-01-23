@@ -1,0 +1,5 @@
+asyncio==4.0.0
+discord.py==2.6.4
+requests==2.32.5
+tenacity==9.1.2
+urllib3==2.6.3
