@@ -1,4 +1,5 @@
 import asyncio
+from datetime import time, timezone, timedelta
 from urllib.parse import quote, unquote
 
 import discord
@@ -12,6 +13,8 @@ from services.dynamodb import (
     try_except_add_to_tracked_skins,
     get_tracked_hash_names,
     delete_tracked_skin,
+    get_most_recent_price,
+    get_guild_channel,
     SkinNotTrackedException,
 )
 from services.ssm import get_parameter
@@ -30,13 +33,6 @@ DISCORD_TOKEN = get_parameter(PARAMETER_NAME)
 COMMAND_PREFIX = "->"
 
 bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
-
-
-@bot.event
-async def on_ready() -> None:
-    print(f"Logged in as {bot.user.name} - {bot.user.id}")
-    print("------")
-    return
 
 
 @bot.event
@@ -140,6 +136,39 @@ async def remove_skin(ctx: commands.Context) -> None:
             f":cross_mark: Couldn't delete the skin. Try again later. ({e})"
         )
 
+    return
+
+
+@tasks.loop(time=time(1, 57))
+async def send_price_updates():
+    print("Started loop")
+    current_guilds = bot.guilds
+    for guild in current_guilds:
+        print(f"guild {guild.id}")
+        channel_id = await asyncio.to_thread(get_guild_channel, guild.id)
+        if channel_id is None:
+            continue
+
+        tracked_hash_names = await asyncio.to_thread(get_tracked_hash_names, guild.id)
+        if len(tracked_hash_names) == 0:
+            continue
+
+        message = "Tracked skins prices:\n"
+        for hash_name in tracked_hash_names:
+            print(hash_name)
+            price = await asyncio.to_thread(get_most_recent_price, hash_name)
+            message += f"`{unquote(hash_name)}:` {price} USD\n"
+
+        channel = bot.get_channel(channel_id)
+        await channel.send(message)
+
+
+@bot.event
+async def on_ready() -> None:
+    if not send_price_updates.is_running():
+        send_price_updates.start()
+    print(f"Logged in as {bot.user.name} - {bot.user.id}")
+    print("------")
     return
 
 

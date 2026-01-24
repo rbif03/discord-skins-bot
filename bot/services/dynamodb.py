@@ -1,3 +1,6 @@
+import time
+from urllib.parse import unquote
+
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
@@ -6,6 +9,7 @@ from models.validation_response import SkinValidationResponse
 dynamodb_client = boto3.resource("dynamodb")
 guild_info_table = dynamodb_client.Table("skinsbot.guild_info")
 tracked_skins_table = dynamodb_client.Table("skinsbot.tracked_skins")
+skin_prices_table = dynamodb_client.Table("skinsbot.skin_prices")
 
 
 class SkinNotTrackedException(Exception):
@@ -18,6 +22,10 @@ class SkinAlreadyTrackedException(Exception):
 
 class TrackedSkinsLimitExceededError(Exception):
     user_message = ":cross_mark: Tracking limit reached for this server. Remove a tracked skin before adding another."
+
+
+class CurrentPriceNotFound(Exception):
+    pass
 
 
 def add_guild_to_db(guild_id: int) -> None:
@@ -38,6 +46,20 @@ def update_guild_channel(guild_id: int, channel_id: int) -> None:
         UpdateExpression="SET channel_id = :channel_id",
         ExpressionAttributeValues={":channel_id": channel_id},
     )
+
+
+def get_guild_channel(guild_id: int) -> None:
+    try:
+        response = guild_info_table.query(
+            KeyConditionExpression=Key("guild_id").eq(guild_id)
+        )
+        if len(response.get("Items", [])) == 0:
+            return None
+
+        channel_id = response.get("Items")[0]["channel_id"]
+        return channel_id
+    except Exception:
+        return None
 
 
 def get_guild_tracked_hash_names(guild_id: int) -> list[str]:
@@ -121,6 +143,23 @@ def delete_tracked_skin(guild_id: int, hash_name: str) -> list[str]:
             raise e
 
 
+def get_most_recent_price(hash_name: str) -> str:
+    unix_now = int(time.time())
+    response = skin_prices_table.query(
+        KeyConditionExpression=Key("hash_name").eq(hash_name)
+        & Key("unix_timestamp").gt(unix_now - 24 * 3600)
+    )
+    try:
+        most_recent_entry = max(
+            response.get("Items", []), key=lambda d: d["unix_timestamp"]
+        )
+        return most_recent_entry["price_usd"]
+
+    except (ValueError, KeyError):
+        raise CurrentPriceNotFound(
+            f"Couldn't find a price for {unquote(hash_name)} in the last 24h."
+        )
+
+
 if __name__ == "__main__":
-    # get_guild_max_tracked_skins(470359666828771328)
     pass
