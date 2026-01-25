@@ -1,5 +1,6 @@
 import asyncio
 from datetime import time, timezone, timedelta
+import logging
 from urllib.parse import quote, unquote
 
 import discord
@@ -7,22 +8,20 @@ from discord.ext import commands, tasks
 
 
 import config
-from services.dynamodb import (
-    add_guild_to_db,
-    update_guild_channel,
-    try_except_add_to_tracked_skins,
-    get_tracked_hash_names,
-    delete_tracked_skin,
-    get_most_recent_price,
-    get_guild_channel,
-    SkinNotTrackedException,
-)
+import db.guild_info
+import db.skins_prices
+import db.tracked_skins
 from services.ssm import get_parameter
+from services.steam_api.validate import get_hash_name, validate_add_skin_argument
 from utils.render_messages import (
     render_formatting_help_msg,
 )
-from utils.validate_skin import get_SkinValidationResponse
 
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -37,56 +36,39 @@ bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
 
 @bot.event
 async def on_guild_join(guild: discord.Guild) -> None:
-    await asyncio.to_thread(add_guild_to_db, guild.id)
-    print(f"Bot joined guild {guild.id}")
-    return
+    result = await db.guild_info.add_guild(guild.id)
+    if result.success:
+        logger.info(f"Bot joined guild {guild.id}")
 
 
 @bot.command()
 async def set_skinsbot_channel(ctx: commands.Context) -> None:
-    guild_obj = ctx.guild
-    channel_obj = ctx.channel
-    try:
-        await asyncio.to_thread(update_guild_channel, guild_obj.id, channel_obj.id)
-        await channel_obj.send(
-            f":white_check_mark: The channel '{channel_obj.name}' will now receive skin prices updates!"
-        )
-    except Exception as e:
-        await channel_obj.send(f":cross_mark: Failed to change channel. {e}")
-
-    return
+    guild = ctx.guild
+    channel = ctx.channel
+    result = await db.guild_info.update_channel(guild.id, channel.id)
+    if result.success:
+        await channel.send(result.text.format(channel_name=channel.name))
+    else:
+        await channel.send(result.text)
 
 
 @bot.command()
 async def add_skin(ctx: commands.Context) -> None:
-    guild_obj = ctx.guild
-    channel_obj = ctx.channel
+    guild = ctx.guild
+    channel = ctx.channel
     head = f"{ctx.prefix}{ctx.invoked_with}"
-    message = ctx.message.content[len(head) :].strip()
-    SkinValidationResponse_obj = await asyncio.to_thread(
-        get_SkinValidationResponse, message
-    )
-    if SkinValidationResponse_obj.status == "error":
-        await channel_obj.send(SkinValidationResponse_obj.text)
+    command_argument = ctx.message.content[len(head) :].strip()
+
+    argument_validation_result = await validate_add_skin_argument(command_argument)
+    if not argument_validation_result.success:
+        await channel.send(argument_validation_result.text)
         return
 
     # At this point, we know the skin name is valid
-    hash_name = SkinValidationResponse_obj.hash_name
+    hash_name = argument_validation_result.data["hash_name"]
+    add_to_db_result = await db.tracked_skins.track_hash_name(guild.id, hash_name)
 
-    add_to_db_validation_obj = await asyncio.to_thread(
-        try_except_add_to_tracked_skins, guild_obj.id, hash_name
-    )
-    if add_to_db_validation_obj.status == "error":
-        await channel_obj.send(add_to_db_validation_obj.text)
-        return
-
-    # At this point add_to_db_validation_obj.status == "success"
-    unquoted_hash_name = unquote(hash_name)
-    await channel_obj.send(
-        f":white_check_mark: Successfully added `{unquoted_hash_name}` to tracked skins!"
-    )
-
-    return
+    await channel.send(add_to_db_result.text)
 
 
 @bot.command()
@@ -98,77 +80,58 @@ async def formatting_help(ctx: commands.Context) -> None:
 
 @bot.command()
 async def tracked_skins(ctx: commands.Context) -> None:
-    guild_obj = ctx.guild
-    channel_obj = ctx.channel
-    try:
-        hash_names = await asyncio.to_thread(get_tracked_hash_names, guild_obj.id)
-        unquoted_hash_names = [f"`{unquote(skin)}`" for skin in hash_names]
-        if len(hash_names) > 0:
-            await channel_obj.send(
-                f"Tracked skins:\n* " + "\n* ".join(unquoted_hash_names)
-            )
-        else:
-            await channel_obj.send(
-                f":cross_mark: This server has no tracked skins. Use `->add_skin <skin name>`"
-            )
-    except Exception as e:
-        await channel_obj.send(f":cross_mark: Failed to fetch tracked skins.\n{e}")
+    guild = ctx.guild
+    channel = ctx.channel
+
+    result = await db.tracked_skins.get_tracked_hash_names(guild.id)
+    await channel.send(result.text)
 
 
 @bot.command()
 async def remove_skin(ctx: commands.Context) -> None:
-    guild_obj = ctx.guild
-    channel_obj = ctx.channel
+    guild = ctx.guild
+    channel = ctx.channel
     head = f"{ctx.prefix}{ctx.invoked_with}"
-    message = ctx.message.content[len(head) :].strip()
-    hash_name = quote(message)
-    try:
-        await asyncio.to_thread(delete_tracked_skin, guild_obj.id, hash_name)
-        await channel_obj.send(
-            f":white_check_mark: `{message}` removed from tracked skins!"
-        )
-    except SkinNotTrackedException:
-        await channel_obj.send(
-            f":cross_mark: {message}is not currently tracked. Use->tracked_skins to view tracked skins."
-        )
-    except Exception as e:
-        await channel_obj.send(
-            f":cross_mark: Couldn't delete the skin. Try again later. ({e})"
-        )
+    command_argument = ctx.message.content[len(head) :].strip()
+    hash_name_result = get_hash_name(command_argument)
+    if not hash_name_result.success:
+        await channel.send(hash_name_result.text)
+        return
 
-    return
+    hash_name = hash_name_result.data["hash_name"]
+    untrack_result = await db.tracked_skins.untrack_hash_name(guild.id, hash_name)
+    await channel.send(untrack_result.text)
 
 
-@tasks.loop(time=time(1, 57))
-async def send_price_updates():
-    print("Started loop")
-    current_guilds = bot.guilds
-    for guild in current_guilds:
-        print(f"guild {guild.id}")
-        channel_id = await asyncio.to_thread(get_guild_channel, guild.id)
-        if channel_id is None:
-            continue
+# @tasks.loop(time=time(1, 57))
+# async def send_price_updates():
+#     print("Started loop")
+#     current_guilds = bot.guilds
+#     for guild in current_guilds:
+#         print(f"guild {guild.id}")
+#         channel_id = await asyncio.to_thread(get_guild_channel, guild.id)
+#         if channel_id is None:
+#             continue
 
-        tracked_hash_names = await asyncio.to_thread(get_tracked_hash_names, guild.id)
-        if len(tracked_hash_names) == 0:
-            continue
+#         tracked_hash_names = await asyncio.to_thread(get_tracked_hash_names, guild.id)
+#         if len(tracked_hash_names) == 0:
+#             continue
 
-        message = "Tracked skins prices:\n"
-        for hash_name in tracked_hash_names:
-            print(hash_name)
-            price = await asyncio.to_thread(get_most_recent_price, hash_name)
-            message += f"`{unquote(hash_name)}:` {price} USD\n"
+#         message = "Tracked skins prices:\n"
+#         for hash_name in tracked_hash_names:
+#             print(hash_name)
+#             price = await asyncio.to_thread(get_most_recent_price, hash_name)
+#             message += f"`{unquote(hash_name)}:` {price} USD\n"
 
-        channel = bot.get_channel(channel_id)
-        await channel.send(message)
+#         channel = bot.get_channel(channel_id)
+#         await channel.send(message)
 
 
 @bot.event
 async def on_ready() -> None:
-    if not send_price_updates.is_running():
-        send_price_updates.start()
-    print(f"Logged in as {bot.user.name} - {bot.user.id}")
-    print("------")
+    # if not send_price_updates.is_running():
+    #     send_price_updates.start()
+    logger.info(f"Logged in as {bot.user.name} - {bot.user.id}")
     return
 
 
