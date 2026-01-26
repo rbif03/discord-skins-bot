@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation template for discord-bot workers.
+
+Resources:
+  DefaultRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: lambda-logs-and-dynamodb
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # CloudWatch Logs (basic Lambda logging)
+              - Sid: CloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
+
+              # DynamoDB read/write for specific tables (and their indexes)
+              - Sid: DynamoDBReadWriteSpecificTables
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.guild_info
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.guild_info/index/*
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.skins_prices
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.skins_prices/index/*
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.tracked_skins
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.tracked_skins/index/*
+  
+  DiscordSkinsBotProducer:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: An AWS Lambda function that retrieves all uniquely tracked skins and returns them as a list.
+      FunctionName: discord-skins-bot-producer
+      Handler: producer.handler
+      MemorySize: 128
+      Role: !GetAtt DefaultRole.Arn
+      Runtime: python3.14
+      Timeout: 60
+      Code:
+        S3Bucket: rogerbif-projects
+        S3Key: discord-bot/workers_latest.zip
+
