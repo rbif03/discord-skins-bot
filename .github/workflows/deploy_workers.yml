@@ -46,10 +46,10 @@ jobs:
     - name: Upload zip to S3
       run: aws s3 cp workers_latest.zip s3://rogerbif-projects/discord-bot/workers_latest.zip
 
-    - name: Create CloudFormation change set
-      run: |
-        aws cloudformation create-change-set \
-          --stack-name discord-skins-bot-workers \
-          --change-set-name workers-update-$(date +%s) \
-          --template-body file://workers/infra/template.yaml \
-          --capabilities CAPABILITY_IAM
+    
+    
+    - name: Deploy to AWS CloudFormation
+      uses: aws-actions/aws-cloudformation-github-deploy@v1
+      with:
+        name: discord-skins-bot-workers
+        template: workers/infra/template.yaml
