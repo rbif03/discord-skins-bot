@@ -64,6 +64,31 @@ async def update_channel(guild_id: int, channel_id: int) -> Result:
         )
 
 
+def get_guild_channel_or_raise(guild_id: int) -> int:
+    response = guild_info_table.query(
+        KeyConditionExpression=Key("guild_id").eq(guild_id)
+    )
+    if response.get("Items"):
+        return response.get("Items")[0].get("channel_id")
+    raise ValueError(f"Guild {guild_id} not found in database.")
+
+
+async def get_guild_channel(guild_id: int) -> Result:
+    try:
+        channel_id = await asyncio.to_thread(get_guild_channel_or_raise, guild_id)
+        return Result(success=True, data={"channel_id": channel_id})
+
+    except ValueError as e:
+        logger.info(f"Guild {guild_id} has no channel set, can't send updates.")
+        return Result(success=True, text=str(e), data={"channel_id": None})
+
+    except Exception as e:
+        text = "Failed to get guild channel."
+        exception_text = f"{type(e).__name__}: {e}"
+        logger.error(f"{text} guild_id={guild_id} {exception_text}")
+        return Result(success=False, text=text)
+
+
 def get_max_tracked_skins_or_raise(guild_id: int) -> int:
     response: dict = guild_info_table.query(
         KeyConditionExpression=Key("guild_id").eq(guild_id)

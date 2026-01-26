@@ -103,34 +103,48 @@ async def remove_skin(ctx: commands.Context) -> None:
     await channel.send(untrack_result.text)
 
 
-# @tasks.loop(time=time(1, 57))
-# async def send_price_updates():
-#     print("Started loop")
-#     current_guilds = bot.guilds
-#     for guild in current_guilds:
-#         print(f"guild {guild.id}")
-#         channel_id = await asyncio.to_thread(get_guild_channel, guild.id)
-#         if channel_id is None:
-#             continue
+@tasks.loop(time=time(21, 30))  # UTC
+async def send_price_updates():
+    guild_list = bot.guilds
+    for guild in guild_list:
+        get_channel_result = await db.guild_info.get_guild_channel(guild.id)
 
-#         tracked_hash_names = await asyncio.to_thread(get_tracked_hash_names, guild.id)
-#         if len(tracked_hash_names) == 0:
-#             continue
+        # db.guild_info.get_guild_channel already logs the following if statements
+        if not get_channel_result.success:
+            continue
+        channel_id = get_channel_result.data.get("channel_id")
+        if channel_id is None:
+            continue
 
-#         message = "Tracked skins prices:\n"
-#         for hash_name in tracked_hash_names:
-#             print(hash_name)
-#             price = await asyncio.to_thread(get_most_recent_price, hash_name)
-#             message += f"`{unquote(hash_name)}:` {price} USD\n"
+        tracked_hash_names_result = await db.tracked_skins.get_tracked_hash_names(
+            guild.id
+        )
+        if not tracked_hash_names_result.success:
+            await bot.get_channel(channel_id).send(tracked_hash_names_result.text)
+            continue
 
-#         channel = bot.get_channel(channel_id)
-#         await channel.send(message)
+        message = "Tracked skins prices:\n"
+        tracked_hash_names = tracked_hash_names_result.data.get(
+            "tracked_hash_names", []
+        )
+        for hash_name in tracked_hash_names:
+            logger.info(f"Getting price for {hash_name}")
+            price_result = await db.skins_prices.get_most_recent_price(hash_name)
+            if not price_result.success:
+                message += f"`{unquote(hash_name)}`: **Price not available**\n"
+                continue
+            price = price_result.data.get("price_usd")
+            price = round(float(price), 2)
+            message += f"`{unquote(hash_name)}:` *${f"{price:.2f}"}*\n"
+
+        await bot.get_channel(channel_id).send(message)
 
 
 @bot.event
 async def on_ready() -> None:
-    # if not send_price_updates.is_running():
-    #     send_price_updates.start()
+    if not send_price_updates.is_running():
+        send_price_updates.start()
+        logger.info("send_price_updates loop started")
     logger.info(f"Logged in as {bot.user.name} - {bot.user.id}")
     return
 
