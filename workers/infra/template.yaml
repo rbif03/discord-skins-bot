@@ -60,5 +60,5 @@ Resources:
       Timeout: 60
       Code:
         S3Bucket: rogerbif-projects
-        S3Key: discord-bot/workers.zip
+        S3Key: discord-bot/workers_latest.zip
 

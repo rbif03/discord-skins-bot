@@ -1,0 +1,55 @@
+name: Deploy Workers
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'workers/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.14'
+
+    - name: Create workers_latest folder
+      run: mkdir workers_latest
+
+    - name: Copy files to workers_latest
+      run: |
+        cp workers/consumer.py workers_latest/
+        cp workers/producer.py workers_latest/
+        cp workers/requirements.txt workers_latest/
+
+    - name: Install dependencies
+      run: pip install -r workers_latest/requirements.txt -t workers_latest/
+
+    - name: Zip the folder
+      run: zip -r workers_latest.zip workers_latest/
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Upload zip to S3
+      run: aws s3 cp workers_latest.zip s3://rogerbif-projects/discord-bot/workers_latest.zip
+
+    - name: Create CloudFormation change set
+      run: |
+        aws cloudformation create-change-set \
+          --stack-name discord-skins-bot-workers \
+          --change-set-name workers-update-$(date +%s) \
+          --template-body file://workers/infra/template.yaml \
+          --capabilities CAPABILITY_IAM
