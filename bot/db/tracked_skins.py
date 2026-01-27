@@ -15,6 +15,7 @@ from db.guild_info import get_max_tracked_skins_or_raise
 from models.result import Result
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 dynamodb_client = boto3.resource("dynamodb")
 tracked_skins_table = dynamodb_client.Table("skinsbot.tracked_skins")
 

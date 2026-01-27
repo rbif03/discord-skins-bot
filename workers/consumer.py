@@ -11,10 +11,8 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 dynamodb_client = boto3.resource("dynamodb")
 skin_prices_table = dynamodb_client.Table("skinsbot.skin_prices")
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class UnsuccessfulRequestError(Exception):

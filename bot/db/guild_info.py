@@ -7,6 +7,7 @@ from boto3.dynamodb.conditions import Key
 from models.result import Result
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 dynamodb_client = boto3.resource("dynamodb")
 guild_info_table = dynamodb_client.Table("skinsbot.guild_info")
 

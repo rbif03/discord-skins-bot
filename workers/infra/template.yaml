@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: discord-skins-bot/workers cloudformation
+Resources:
+  SkinsbotWorkersProducerLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://rogerbif-projects/discord-bot/workers_latest.zip
+      Description: ''
+      MemorySize: 128
+      Timeout: 30
+      Handler: producer.handler
+      Runtime: python3.14
+      Architectures:
+        - x86_64
+      PackageType: Zip
+      Policies:
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+            Resource: arn:aws:logs:us-east-1:123456789012:*
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:BatchWriteItem
+              - dynamodb:PutItem
+              - dynamodb:DescribeTable
+              - dynamodb:DeleteItem
+              - dynamodb:GetItem
+              - dynamodb:Scan
+              - dynamodb:Query
+              - dynamodb:UpdateItem
+            Resource:
+              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.tracked_skins
+              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.guild_info
+              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.skin_prices
+
+  SkinsbotWorkersConsumerLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://rogerbif-projects/discord-bot/workers_latest.zip
+      Description: ''
+      MemorySize: 128
+      Timeout: 30
+      Handler: consumer.handler
+      Runtime: python3.14
+      Architectures:
+        - x86_64
+      PackageType: Zip
+      Policies:
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+            Resource: arn:aws:logs:us-east-1:123456789012:*
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:BatchWriteItem
+              - dynamodb:PutItem
+              - dynamodb:DescribeTable
+              - dynamodb:DeleteItem
+              - dynamodb:GetItem
+              - dynamodb:Scan
+              - dynamodb:Query
+              - dynamodb:UpdateItem
+            Resource:
+              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.tracked_skins
+              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.guild_info
+              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.skin_prices

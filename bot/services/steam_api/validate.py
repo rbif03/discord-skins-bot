@@ -15,6 +15,7 @@ from services.steam_api.exceptions import (
 
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def get_hash_name_or_raise(command_argument: str) -> str:
