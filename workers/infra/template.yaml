@@ -35,9 +35,9 @@ Resources:
                   - dynamodb:Query
                   - dynamodb:UpdateItem
                 Resource:
-                  - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.tracked_skins
-                  - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.guild_info
-                  - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.skin_prices
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.tracked_skins'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.guild_info'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.skin_prices'
   SkinsbotWorkersProducerLambda:
     Type: AWS::Serverless::Function
     Properties:
