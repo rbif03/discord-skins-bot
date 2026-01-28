@@ -2,6 +2,42 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: discord-skins-bot/workers cloudformation
 Resources:
+  SkinsbotWorkersRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaLoggingPolicy
+          PolicyDocument:
+            Version: "2012-10-17"		 	 	 
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:PutItem
+                  - dynamodb:DescribeTable
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                  - dynamodb:UpdateItem
+                Resource:
+                  - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.tracked_skins
+                  - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.guild_info
+                  - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.skin_prices
   SkinsbotWorkersProducerLambda:
     Type: AWS::Serverless::Function
     Properties:
@@ -15,33 +51,7 @@ Resources:
       Architectures:
         - x86_64
       PackageType: Zip
-      Policies:
-        Statement:
-          - Effect: Allow
-            Action:
-              - logs:CreateLogGroup
-            Resource: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
-          - Effect: Allow
-            Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Resource: '*'
-          - Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:BatchWriteItem
-              - dynamodb:PutItem
-              - dynamodb:DescribeTable
-              - dynamodb:DeleteItem
-              - dynamodb:GetItem
-              - dynamodb:Scan
-              - dynamodb:Query
-              - dynamodb:UpdateItem
-            Resource:
-              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.tracked_skins
-              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.guild_info
-              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.skin_prices
+      Role: !GetAtt SkinsbotWorkersRole.Arn
 
   SkinsbotWorkersConsumerLambda:
     Type: AWS::Serverless::Function
@@ -56,30 +66,4 @@ Resources:
       Architectures:
         - x86_64
       PackageType: Zip
-      Policies:
-        Statement:
-          - Effect: Allow
-            Action:
-              - logs:CreateLogGroup
-            Resource: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
-          - Effect: Allow
-            Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Resource: '*'
-          - Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:BatchWriteItem
-              - dynamodb:PutItem
-              - dynamodb:DescribeTable
-              - dynamodb:DeleteItem
-              - dynamodb:GetItem
-              - dynamodb:Scan
-              - dynamodb:Query
-              - dynamodb:UpdateItem
-            Resource:
-              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.tracked_skins
-              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.guild_info
-              - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.skin_prices
+      Role: !GetAtt SkinsbotWorkersRole.Arn
