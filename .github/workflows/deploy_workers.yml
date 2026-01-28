@@ -39,8 +39,8 @@ jobs:
       - name: Upload to S3
         run: aws s3 cp workers.zip ${{ secrets.SKINSBOT_S3_BUCKET_URI }}workers.zip
 
-      # - name: Deploy CloudFormation stack
-      #   run: |
-      #     aws cloudformation deploy \
-      #       --template-file workers/infra/template.yaml \
-      #       --stack-name skinsbot-workers \
+      - name: Deploy CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+            --template-file workers/infra/template.yaml \
+            --stack-name skinsbot-workers \

@@ -5,7 +5,8 @@ Resources:
   SkinsbotWorkersProducerLambda:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://rogerbif-projects/discord-bot/workers_latest.zip
+      FunctionName: skinsbot-workers-producer
+      CodeUri: s3://rogerbif-projects/skinsbot/workers.zip
       Description: ''
       MemorySize: 128
       Timeout: 30
@@ -45,7 +46,8 @@ Resources:
   SkinsbotWorkersConsumerLambda:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://rogerbif-projects/discord-bot/workers_latest.zip
+      FunctionName: skinsbot-workers-consumer
+      CodeUri: s3://rogerbif-projects/skinsbot/workers.zip
       Description: ''
       MemorySize: 128
       Timeout: 30
