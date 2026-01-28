@@ -23,7 +23,11 @@ jobs:
         run: pip install -r workers/requirements.txt -t workers/
 
       - name: Zip workers folder
-        run: zip -r workers.zip workers/
+        run: cd workers && zip -r ../workers.zip . && cd ..
+        # The above is equivalent to 3 commands:
+        # run: cd workers
+        # run: zip -r ../workers.zip .
+        # run: cd ..
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
