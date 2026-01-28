@@ -44,3 +44,4 @@ jobs:
           aws cloudformation deploy \
             --template-file workers/infra/template.yaml \
             --stack-name skinsbot-workers \
+            --capabilities CAPABILITY_NAMED_IAM
