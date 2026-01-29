@@ -67,3 +67,82 @@ Resources:
         - x86_64
       PackageType: Zip
       Role: !GetAtt SkinsbotWorkersRole.Arn
+  
+  WorkersStepFunctions:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: skinsbot-workers-stepfunctions
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource:
+                - !GetAtt SkinsbotWorkersProducerLambda.Arn
+                - !GetAtt SkinsbotWorkersConsumerLambda.Arn
+      Events:
+        SkinsbotWorkersCron:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: 'cron(0 18 * * ? *)'
+            Input: "{}"
+      Definition:
+        Comment: State machine definition
+        StartAt: SkinsbotWorkersProducerState
+        States:
+          SkinsbotWorkersProducerState:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Output: '{% $states.result.Payload %}'
+            Arguments:
+              FunctionName: !GetAtt SkinsbotWorkersProducerLambda.Arn
+              Payload: '{% $states.input %}'
+            Retry:
+              - ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 1
+                MaxAttempts: 3
+                BackoffRate: 2
+                JitterStrategy: FULL
+            Next: Map
+          Map:
+            Type: Map
+            ItemProcessor:
+              ProcessorConfig:
+                Mode: INLINE
+              StartAt: SkinsbotWorkersConsumerState
+              States:
+                SkinsbotWorkersConsumerState:
+                  Type: Task
+                  Resource: arn:aws:states:::lambda:invoke
+                  Output: '{% $states.result.Payload %}'
+                  Arguments:
+                    FunctionName: !GetAtt SkinsbotWorkersConsumerLambda.Arn
+                    Payload: '{% $states.input %}'
+                  Retry:
+                    - ErrorEquals:
+                        - Lambda.ServiceException
+                        - Lambda.AWSLambdaException
+                        - Lambda.SdkClientException
+                        - Lambda.TooManyRequestsException
+                      IntervalSeconds: 1
+                      MaxAttempts: 3
+                      BackoffRate: 2
+                      JitterStrategy: FULL
+                  Next: Wait
+                  Catch:
+                    - ErrorEquals:
+                        - States.ALL
+                      Next: Wait
+                      Comment: Ignore error
+                Wait:
+                  Type: Wait
+                  Seconds: 5
+                  End: true
+            End: true
+            MaxConcurrency: 1
+
+      

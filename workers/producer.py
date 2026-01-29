@@ -25,7 +25,7 @@ def handler(event, context):
     # if, for some reason, None has been added, it will be removed
     unique_tracked_skins.add(None)  # adding to avoid a KeyError
     unique_tracked_skins.remove(None)
-    return list(unique_tracked_skins)
+    return [{"hash_name": hn} for hn in unique_tracked_skins]
 
 
 if __name__ == "__main__":

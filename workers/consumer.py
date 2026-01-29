@@ -105,7 +105,7 @@ def handler(event, context):
     try:
         unix_now = int(time.time())
         price_overview = get_market_price_overview(hash_name)
-        logging.info(f"{hash_name} price_overview:{price_overview.get('body')}")
+        logger.info(f"{hash_name} price_overview:{price_overview.get('body')}")
 
         cheapest_listing = convert_price_to_decimal(
             price_overview["body"]["lowest_price"]
