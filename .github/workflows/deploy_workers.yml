@@ -14,6 +14,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Set timestamp
+        run: echo "TS=$(date +%s)" >> $GITHUB_ENV
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -37,7 +40,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Upload to S3
-        run: aws s3 cp workers.zip ${{ secrets.SKINSBOT_S3_BUCKET_URI }}workers.zip
+        run: aws s3 cp workers.zip ${{ secrets.SKINSBOT_S3_BUCKET_URI }}workers_${{env.TS}}.zip
 
       - name: Deploy CloudFormation stack
         run: |
@@ -45,4 +48,5 @@ jobs:
             --template-file workers/infra/template.yaml \
             --stack-name skinsbot-workers \
             --capabilities CAPABILITY_NAMED_IAM \
-            --no-execute-changeset
+            --no-execute-changeset  \
+            --parameter-overrides TS=${{env.TS}}
