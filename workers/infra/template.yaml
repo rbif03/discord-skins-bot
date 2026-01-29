@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: discord-skins-bot/workers cloudformation
+Parameters:
+  TS:
+    Type: String
+    Description: Build/deploy timestamp passed from GitHub Actions
+
 Resources:
   SkinsbotWorkersRole:
     Type: AWS::IAM::Role
@@ -42,7 +47,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: skinsbot-workers-producer
-      CodeUri: s3://rogerbif-projects/skinsbot/workers.zip
+      CodeUri:
+        Bucket: rogerbif-projects
+        Key: !Sub "skinsbot/workers_${TS}.zip"
       Description: ''
       MemorySize: 128
       Timeout: 30
@@ -57,7 +64,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: skinsbot-workers-consumer
-      CodeUri: s3://rogerbif-projects/skinsbot/workers.zip
+      CodeUri:
+        Bucket: rogerbif-projects
+        Key: !Sub "skinsbot/workers_${TS}.zip"
       Description: ''
       MemorySize: 128
       Timeout: 30
