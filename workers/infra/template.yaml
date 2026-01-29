@@ -47,7 +47,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: skinsbot-workers-producer
-      CodeUri: !Sub 's3://rogerbif-projects/skinsbot/workers_${TS}.zip'
+      CodeUri:
+        Bucket: rogerbif-projects
+        Key: !Sub "skinsbot/workers_${TS}.zip"
       Description: ''
       MemorySize: 128
       Timeout: 30
@@ -62,7 +64,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: skinsbot-workers-consumer
-      CodeUri: !Sub 's3://rogerbif-projects/skinsbot/workers_${TS}.zip'
+      CodeUri:
+        Bucket: rogerbif-projects
+        Key: !Sub "skinsbot/workers_${TS}.zip"
       Description: ''
       MemorySize: 128
       Timeout: 30
