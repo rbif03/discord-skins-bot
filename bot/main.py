@@ -102,7 +102,7 @@ async def remove_skin(ctx: commands.Context) -> None:
     await channel.send(untrack_result.text)
 
 
-@tasks.loop(time=time(19, 2))  # UTC
+@tasks.loop(time=time(19, 35))  # UTC
 async def send_price_updates():
     guild_list = bot.guilds
     for guild in guild_list:
@@ -158,6 +158,13 @@ async def on_ready() -> None:
 
 def handler(event, context):
     bot.run(DISCORD_TOKEN)
+    # until bot.close() is called, the function isn't resumed
+    if send_price_updates.is_running():
+        send_price_updates.stop()
+        logger.info("send_price_updates loop started")
+    if shutdown_bot.is_running():
+        shutdown_bot.stop()
+    logger.info("Bot has been shut down")
 
 
 if __name__ == "__main__":
