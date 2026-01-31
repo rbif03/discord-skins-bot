@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: discord-skins-bot/bot cloudformation
+Parameters:
+  TS:
+    Type: String
+    Description: Build/deploy timestamp passed from GitHub Actions
+Resources:
+  SkinsbotBotRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: 'SkinsbotBotPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:PutItem
+                  - dynamodb:DescribeTable
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                  - dynamodb:UpdateItem
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.tracked_skins'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.guild_info'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/skinsbot.skin_prices'
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                Resource:
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/skinsbot/discord_token
+  SkinsbotBotLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: skinsbot-bot-main
+      CodeUri:
+        Bucket: rogerbif-projects
+        Key: !Sub "skinsbot/bot/bot_${TS}.zip"
+      Description: ''
+      MemorySize: 128
+      Timeout: 900
+      Handler: main.handler
+      Runtime: python3.14
+      Architectures:
+        - x86_64
+      PackageType: Zip
+      Role: !GetAtt SkinsbotBotRole.Arn
+      Events:
+        SkinsbotBotCron:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: 'cron(0,15,30,45 * * * ? *)'
+            Input: "{}"
+
+

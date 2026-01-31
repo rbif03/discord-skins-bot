@@ -1,4 +1,3 @@
-import asyncio
 from datetime import time, timezone, timedelta
 import logging
 from urllib.parse import quote, unquote
@@ -13,13 +12,15 @@ import db.skins_prices
 import db.tracked_skins
 from services.ssm import get_parameter
 from services.steam_api.validate import get_hash_name, validate_add_skin_argument
-from utils.render_messages import (
-    render_formatting_help_msg,
+from utils.render_messages import render_formatting_help_msg
+from utils.bot_utils import get_shutdown_time
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    force=True,
 )
-
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -101,7 +102,7 @@ async def remove_skin(ctx: commands.Context) -> None:
     await channel.send(untrack_result.text)
 
 
-@tasks.loop(time=time(21, 30))  # UTC
+@tasks.loop(time=time(19, 2))  # UTC
 async def send_price_updates():
     guild_list = bot.guilds
     for guild in guild_list:
@@ -138,13 +139,26 @@ async def send_price_updates():
         await bot.get_channel(channel_id).send(message)
 
 
+@tasks.loop(time=get_shutdown_time())
+async def shutdown_bot():
+    await bot.close()
+
+
 @bot.event
 async def on_ready() -> None:
     if not send_price_updates.is_running():
         send_price_updates.start()
         logger.info("send_price_updates loop started")
+    if not shutdown_bot.is_running():
+        shutdown_bot.start()
+        logger.info(f"bot will be shut down at {get_shutdown_time()}")
     logger.info(f"Logged in as {bot.user.name} - {bot.user.id}")
     return
 
 
-bot.run(DISCORD_TOKEN)
+def handler(event, context):
+    bot.run(DISCORD_TOKEN)
+
+
+if __name__ == "__main__":
+    handler({}, None)

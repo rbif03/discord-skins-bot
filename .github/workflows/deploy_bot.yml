@@ -3,12 +3,12 @@ on:
     branches:
       - main
     paths:
-      - 'workers/**'
+      - 'bot/**'
   pull_request:
     branches:
       - main
     paths:
-      - 'workers/**'
+      - 'bot/**'
 
 jobs:
   deploy:
@@ -27,13 +27,13 @@ jobs:
           python-version: '3.14'
 
       - name: Install dependencies
-        run: pip install -r workers/requirements.txt -t workers/
+        run: pip install -r bot/requirements.txt -t bot/
 
-      - name: Zip workers folder
-        run: cd workers && zip -r ../workers.zip . && cd ..
+      - name: Zip bot folder
+        run: cd bot && zip -r ../bot.zip . && cd ..
         # The above is equivalent to 3 commands:
-        # run: cd workers
-        # run: zip -r ../workers.zip .
+        # run: cd bot
+        # run: zip -r ../bot.zip .
         # run: cd ..
 
       - name: Configure AWS credentials
@@ -44,13 +44,13 @@ jobs:
           aws-region: us-east-1
 
       - name: Upload to S3
-        run: aws s3 cp workers.zip ${{ secrets.SKINSBOT_S3_BUCKET_URI }}workers/workers_${{env.TS}}.zip
+        run: aws s3 cp bot.zip ${{ secrets.SKINSBOT_S3_BUCKET_URI }}bot/bot_${{env.TS}}.zip
 
       - name: Deploy CloudFormation stack
         run: |
           aws cloudformation deploy \
-            --template-file workers/infra/template.yaml \
-            --stack-name skinsbot-workers \
+            --template-file bot/infra/template.yaml \
+            --stack-name skinsbot-bot \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-execute-changeset  \
             --parameter-overrides TS=${{env.TS}}
