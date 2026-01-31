@@ -71,5 +71,7 @@ Resources:
           Properties:
             ScheduleExpression: 'cron(0,15,30,45 * * * ? *)'
             Input: "{}"
+            RetryPolicy:
+              MaximumRetryAttempts: 0
 
 
