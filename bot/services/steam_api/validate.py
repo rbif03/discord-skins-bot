@@ -117,7 +117,7 @@ async def validate_add_skin_argument(command_argument: str) -> Result:
         return Result(success=False, text=str(e))
 
     except (JSONDecodeError, RequestException) as e:
-        logger(str(e))
+        logger.error(str(e))
         raise SteamMarketRequestError
 
     except UnsuccessfulRequestError as e:

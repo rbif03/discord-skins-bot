@@ -49,7 +49,7 @@ Resources:
       FunctionName: skinsbot-workers-producer
       CodeUri:
         Bucket: rogerbif-projects
-        Key: !Sub "skinsbot/workers_${TS}.zip"
+        Key: !Sub "skinsbot/workers/workers_${TS}.zip"
       Description: ''
       MemorySize: 128
       Timeout: 30
@@ -66,7 +66,7 @@ Resources:
       FunctionName: skinsbot-workers-consumer
       CodeUri:
         Bucket: rogerbif-projects
-        Key: !Sub "skinsbot/workers_${TS}.zip"
+        Key: !Sub "skinsbot/workers/workers_${TS}.zip"
       Description: ''
       MemorySize: 128
       Timeout: 30
