@@ -15,7 +15,7 @@ def get_shutdown_time():
     utc_now = datetime.now(timezone.utc)
     utc_hour, utc_minute = utc_now.hour, utc_now.minute
     n_exec = 1 + utc_minute // 15  # 1 to 4 scale
-    return time(utc_hour, 15 * n_exec - 1, 50)
+    return time(utc_hour, 15 * n_exec - 1, 45)
 
 
 if __name__ == "__main__":
