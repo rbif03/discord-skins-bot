@@ -1,5 +1,6 @@
 from datetime import time, timezone, timedelta
 import logging
+import sys
 from urllib.parse import quote, unquote
 
 import discord
@@ -141,7 +142,7 @@ async def send_price_updates():
 
 @tasks.loop(time=get_shutdown_time())
 async def shutdown_bot():
-    await bot.close()
+    sys.exit(0)
 
 
 @bot.event
@@ -158,13 +159,6 @@ async def on_ready() -> None:
 
 def handler(event, context):
     bot.run(DISCORD_TOKEN)
-    # until bot.close() is called, the function isn't resumed
-    if send_price_updates.is_running():
-        send_price_updates.stop()
-        logger.info("send_price_updates loop started")
-    if shutdown_bot.is_running():
-        shutdown_bot.stop()
-    logger.info("Bot has been shut down")
 
 
 if __name__ == "__main__":
