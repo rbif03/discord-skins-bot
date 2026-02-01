@@ -1,3 +1,7 @@
+from urllib.parse import unquote
+import discord
+
+
 def render_no_active_listings_msg(COMMAND_PREFIX):
     return (
         f":cross_mark: No active listings found for that skin.\n"
@@ -32,6 +36,23 @@ def render_formatting_help_msg(COMMAND_PREFIX):
         f"{COMMAND_PREFIX}add_skin AWP | Safari Mesh (Field-Tested)\n"
         f"{COMMAND_PREFIX}add_skin `https://steamcommunity.com/market/listings/730/...`"
     )
+
+
+def render_skin_prices_message(hash_name_to_price_usd_map: dict):
+    title = ":gem: CS2 Price Tracker :gem:"
+    description = ""
+    sorted_map = {
+        k: v
+        for k, v in sorted(
+            hash_name_to_price_usd_map.items(), key=lambda item: item[1], reverse=True
+        )
+    }
+    for hash_name, price_usd in sorted_map.items():
+        price = round(float(price_usd), 2)
+        description += (
+            f":small_blue_diamond: **{unquote(hash_name)}** — **${f"{price:.2f}"}**\n"
+        )
+    return discord.Embed(title=title, description=description, color=0x68B2FC)
 
 
 if __name__ == "__main__":
