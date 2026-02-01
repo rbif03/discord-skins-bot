@@ -46,3 +46,16 @@ async def get_most_recent_price(hash_name: str) -> Result:
         exception_text = f"{type(e).__name__}: {e}"
         logger.error(f"{text} {exception_text}")
         return Result(success=False, text=text)
+
+
+async def get_most_recent_prices(hash_names: list[str]):
+    hash_name_to_price_usd_map = {}
+    for hash_name in hash_names:
+        price_result = await get_most_recent_price(hash_name)
+        if not price_result.success:
+            hash_name_to_price_usd_map[hash_name] = None
+            continue
+
+        price = price_result.data.get("price_usd")
+        hash_name_to_price_usd_map[hash_name] = price
+    return hash_name_to_price_usd_map
