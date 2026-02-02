@@ -13,8 +13,12 @@ import db.skins_prices
 import db.tracked_skins
 from services.ssm import get_parameter
 from services.steam_api.validate import get_hash_name, validate_add_skin_argument
-from utils.render_messages import render_formatting_help_msg, render_skin_prices_message
 from utils.bot_utils import get_shutdown_time
+from utils.render_messages import (
+    render_formatting_help_msg,
+    render_skin_prices_message,
+    render_help_msg,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -77,6 +81,11 @@ async def run_bot_for(seconds: int):
         result = await db.guild_info.add_guild(guild.id)
         if result.success:
             logger.info(f"Bot joined guild {guild.id}")
+
+    @bot.command()
+    async def help(ctx: commands.Context) -> None:
+        channel = ctx.channel
+        await channel.send(render_help_msg(COMMAND_PREFIX))
 
     @bot.command()
     async def set_skinsbot_channel(ctx: commands.Context) -> None:

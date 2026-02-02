@@ -18,6 +18,27 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+def translate_wear_abbreviation_to_full(command_argument: str) -> str:
+    abbreviations = {
+        "FN": "Factory New",
+        "MW": "Minimal Wear",
+        "FT": "Field-Tested",
+        "WW": "Well-Worn",
+        "BS": "Battle-Scarred",
+    }
+    for abbr, full in abbreviations.items():
+        if f"({abbr})" in command_argument:
+            return command_argument.replace(f"({abbr})", f"({full})")
+
+    return command_argument
+
+
+def fix_stattrak_typo(command_argument: str) -> str:
+    if "StatTrak " in command_argument:
+        return command_argument.replace("StatTrak ", "StatTrak™ ")
+    return command_argument
+
+
 def get_hash_name_or_raise(command_argument: str) -> str:
     """
     Extracts the Steam Market hash name from either:
@@ -28,6 +49,8 @@ def get_hash_name_or_raise(command_argument: str) -> str:
     parsed = urlparse(command_argument)
     if not parsed.scheme and not parsed.netloc:
         # It's not a URL
+        command_argument = translate_wear_abbreviation_to_full(command_argument)
+        command_argument = fix_stattrak_typo(command_argument)
         return quote(command_argument)
 
     if "steamcommunity.com" in parsed.netloc and "/market/listings/730/" in parsed.path:
