@@ -17,7 +17,7 @@ from utils.bot_utils import get_shutdown_time
 from utils.render_messages import (
     render_formatting_help_msg,
     render_skin_prices_message,
-    render_help_msg,
+    render_help_embed,
 )
 
 logging.basicConfig(
@@ -37,7 +37,9 @@ COMMAND_PREFIX = "->"
 
 
 async def run_bot_for(seconds: int):
-    bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
+    bot = commands.Bot(
+        command_prefix=COMMAND_PREFIX, intents=intents, help_command=None
+    )
 
     @tasks.loop(count=1)
     async def shutdown_bot():
@@ -85,7 +87,7 @@ async def run_bot_for(seconds: int):
     @bot.command()
     async def help(ctx: commands.Context) -> None:
         channel = ctx.channel
-        await channel.send(render_help_msg(COMMAND_PREFIX))
+        await channel.send(embed=render_help_embed(COMMAND_PREFIX))
 
     @bot.command()
     async def set_skinsbot_channel(ctx: commands.Context) -> None:
