@@ -36,13 +36,15 @@ DISCORD_TOKEN = get_parameter(PARAMETER_NAME)
 COMMAND_PREFIX = "->"
 
 
-async def run_bot_for(seconds: int):
+async def run_bot_for(seconds: int | None):
     bot = commands.Bot(
         command_prefix=COMMAND_PREFIX, intents=intents, help_command=None
     )
 
     @tasks.loop(count=1)
     async def shutdown_bot():
+        if seconds is None:
+            return
         await asyncio.sleep(seconds)
         logger.info("Shutting down bot to avoid lambda timeout")
         await bot.close()
@@ -162,8 +164,10 @@ async def run_bot_for(seconds: int):
 
 
 def handler(event, context):
-    shutdown_time = get_shutdown_time()
-    run_for = (shutdown_time - datetime.now(timezone.utc)).total_seconds()
+    run_for = None  # default to no shutdown
+    if event.get("lambda") == True:
+        shutdown_time = get_shutdown_time()
+        run_for = (shutdown_time - datetime.now(timezone.utc)).total_seconds()
     asyncio.run(run_bot_for(run_for - 2))  # shut down 2 seconds early
     return {"ok": True}
 
