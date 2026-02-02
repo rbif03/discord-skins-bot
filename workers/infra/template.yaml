@@ -5,6 +5,9 @@ Parameters:
   TS:
     Type: String
     Description: Build/deploy timestamp passed from GitHub Actions
+  MYS3BUCKETNAME:
+    Type: String
+    Description: Forces to set a bucket name before running workflow
 
 Resources:
   SkinsbotWorkersRole:
@@ -48,7 +51,7 @@ Resources:
     Properties:
       FunctionName: skinsbot-workers-producer
       CodeUri:
-        Bucket: rogerbif-projects
+        Bucket: !Sub ${MYS3BUCKETNAME}
         Key: !Sub "skinsbot/workers/workers_${TS}.zip"
       Description: ''
       MemorySize: 128
@@ -65,7 +68,7 @@ Resources:
     Properties:
       FunctionName: skinsbot-workers-consumer
       CodeUri:
-        Bucket: rogerbif-projects
+        Bucket: !Sub ${MYS3BUCKETNAME}
         Key: !Sub "skinsbot/workers/workers_${TS}.zip"
       Description: ''
       MemorySize: 128
