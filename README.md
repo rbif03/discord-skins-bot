@@ -9,12 +9,37 @@ Built with **Python**, **discord.py**, and the **Steam Web API**, backed by **AW
 
 
 ## Gallery
+
+<p align="center">
+  <img width="696" height="265" alt="add_remove_skin" src="https://github.com/user-attachments/assets/f53ceea5-45e1-47da-9065-a85bf51eb321" />
+</p>
+<p align="center">
+  <em>Example of the bot’s commands '->add_skin' and '->remove_skin'.</em>
+</p>
+
+---
+ 
+<p align="center">
+  <img width="434" height="331" alt="tracked_skins" src="https://github.com/user-attachments/assets/3f7cd588-561c-4c3d-90c8-1f3fe40c6ded" />
+</p>
+<p align="center">
+  <em>Example of the bot’s '->tracked_skins' command.</em>
+</p>
+
+---
+
+
 <p align="center">
   <img width="455" height="255" alt="image" src="https://github.com/user-attachments/assets/1eb43e41-1246-4454-92a5-5ca4187d60fe" />
 </p>
 <p align="center">
   <em>Example of the bot’s daily price update message in Discord.</em>
 </p>
+
+---
+
+
+
 
 
 ## Commands
