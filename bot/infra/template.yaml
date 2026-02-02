@@ -5,6 +5,10 @@ Parameters:
   TS:
     Type: String
     Description: Build/deploy timestamp passed from GitHub Actions
+  MYS3BUCKETNAME:
+    Type: String
+    Description: Forces to set a bucket name before running workflow
+
 Resources:
   SkinsbotBotRole:
     Type: AWS::IAM::Role
@@ -54,7 +58,7 @@ Resources:
     Properties:
       FunctionName: skinsbot-bot-main
       CodeUri:
-        Bucket: rogerbif-projects
+        Bucket: !Sub ${MYS3BUCKETNAME}
         Key: !Sub "skinsbot/bot/bot_${TS}.zip"
       Description: ''
       MemorySize: 128
@@ -70,7 +74,7 @@ Resources:
           Type: ScheduleV2
           Properties:
             ScheduleExpression: 'cron(0,15,30,45 * * * ? *)'
-            Input: "{}"
+            Input: '{"lambda": true}'
             RetryPolicy:
               MaximumRetryAttempts: 0
 

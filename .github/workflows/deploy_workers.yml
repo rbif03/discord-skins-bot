@@ -53,4 +53,4 @@ jobs:
             --stack-name skinsbot-workers \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-execute-changeset  \
-            --parameter-overrides TS=${{env.TS}}
+            --parameter-overrides TS=${{env.TS}} MYS3BUCKETNAME=${{ vars.MYS3BUCKETNAME }}
