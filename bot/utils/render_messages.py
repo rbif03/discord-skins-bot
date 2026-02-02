@@ -11,64 +11,94 @@ def render_no_active_listings_msg(COMMAND_PREFIX):
     )
 
 
-def render_help_msg(COMMAND_PREFIX):
-    return (
-        "Available commands:\n\n"
-        f"`{COMMAND_PREFIX}set_skinsbot_channel` — Sets the channel where SkinsBot will post price updates. This should be the first command you run.\n"
-        f"`{COMMAND_PREFIX}add_skin <skin name or Steam Market link>` - Track a skin's price.\n"
-        f"`{COMMAND_PREFIX}remove_skin <skin name>` - Stop tracking a skin's price.\n"
-        f"`{COMMAND_PREFIX}tracked_skins` - View the list of skins currently being tracked.\n"
-        f"`{COMMAND_PREFIX}formatting_help` - Get help on how to format skin names.\n"
-    )
+def render_help_embed(COMMAND_PREFIX: str) -> dict:
+    embed_dict = {
+        "title": "SkinsBot — Commands",
+        "description": (
+            "Track Steam Market skin prices and get periodic updates.\n\n"
+            f"**Start here:** `{COMMAND_PREFIX}set_skinsbot_channel`"
+        ),
+        "fields": [
+            {
+                "name": f"{COMMAND_PREFIX}set_skinsbot_channel",
+                "value": "Sets the channel where SkinsBot will post price updates. Run this first.",
+                "inline": False,
+            },
+            {
+                "name": f"{COMMAND_PREFIX}add_skin <skin name | Steam Market link>",
+                "value": "Start tracking a skin’s price.",
+                "inline": False,
+            },
+            {
+                "name": f"{COMMAND_PREFIX}remove_skin <skin name>",
+                "value": "Stop tracking a skin’s price.",
+                "inline": False,
+            },
+            {
+                "name": f"{COMMAND_PREFIX}tracked_skins",
+                "value": "Show all skins currently being tracked in this server/channel.",
+                "inline": False,
+            },
+            {
+                "name": f"{COMMAND_PREFIX}formatting_help",
+                "value": "Examples and rules for formatting skin names (recommended input method).",
+                "inline": False,
+            },
+        ],
+        "footer": {
+            "text": f"Tip: Use `{COMMAND_PREFIX}formatting_help` if a skin name isn’t being recognized."
+        },
+    }
+    return discord.Embed.from_dict(embed_dict)
 
 
 def render_formatting_help_msg(COMMAND_PREFIX):
     return (
-        "Skin formatting help\n\n"
+        "**Skin Name Formatting Help**\n\n"
         "You can provide an item in 2 ways:\n\n"
-        "1) Item name (recommended)\n"
+        "**1) Item name**\n"
         "Use one of the patterns below:\n\n"
-        "A) Normal skins\n"
+        "```A) Cases\n"
+        "Just send the case name:\n"
+        "Revolution Case\n"
+        "Glove Case```\n"
+        "```B) Normal skins\n"
         "WEAPON | SKIN NAME (WEAR)\n"
         "Examples:\n"
-        "`AWP | Safari Mesh (Field-Tested)`\n"
-        "`AK-47 | Redline (Minimal Wear)`\n"
-        "`Glock-18 | Water Elemental (Factory New)`\n\n"
-        "B) Souvenir skins\n"
+        "AWP | Safari Mesh (Field-Tested)\n"
+        "AK-47 | Redline (Minimal Wear)\n"
+        "Glock-18 | Water Elemental (Factory New)```\n"
+        "```C) Souvenir skins\n"
         "Add the `Souvenir` prefix before the weapon:\n"
         "`Souvenir WEAPON | SKIN NAME (WEAR)`\n"
         "Examples:\n"
-        "`Souvenir SSG 08 | Prey (Battle-Scarred)`\n"
-        "`Souvenir Nova | Rain Station (Minimal Wear)`\n\n"
-        "C) StatTrak\u2122 skins\n"
+        "Souvenir SSG 08 | Prey (Battle-Scarred)\n"
+        "Souvenir Nova | Rain Station (Minimal Wear)```\n"
+        "```D) StatTrak\u2122 skins\n"
         "Add the `StatTrak\u2122` prefix before the weapon.\n"
         "The `\u2122` symbol is optional.\n"
         "Important: `StatTrak` must be properly capitalized.\n"
         "Examples:\n"
-        "`StatTrak\u2122 FAMAS | Meow 36 (Field-Tested)`\n"
-        "`StatTrak FAMAS | Meow 36 (Field-Tested)`\n\n"
-        "Wear must be one of:\n"
+        "StatTrak\u2122 FAMAS | Meow 36 (Field-Tested)\n"
+        "StatTrak FAMAS | Meow 36 (Field-Tested)```\n"
+        "**Wear must be one of:**\n"
         "`Factory New`, `Minimal Wear`, `Field-Tested`, `Well-Worn`, `Battle-Scarred`\n"
         "You can also use abbreviations:\n"
         "`(FN)`, `(MW)`, `(FT)`, `(WW)`, `(BS)`\n\n"
-        "D) Cases\n"
-        "Just send the case name:\n"
-        "`Revolution Case`\n"
-        "`Glove Case`\n\n"
-        "2) Steam Market link\n"
-        "Paste the full listing URL, like:\n"
-        "`https://steamcommunity.com/market/listings/730/StatTrak%E2%84%A2%20AUG%20%7C%20Triqua%20%28Well-Worn%29`\n\n"
+        "**2) Steam Market link**\n"
+        "```Paste the full listing URL, like:\n"
+        "https://steamcommunity.com/market/listings/730/StatTrak%E2%84%A2%20AUG%20%7C%20Triqua%20%28Well-Worn%29```\n"
         "Tips:\n"
         "- Include the wear in parentheses. It matters.\n"
         "- Keep the | between weapon and skin name.\n"
         "- Copy and paste from Steam if possible to avoid typos.\n"
         "- Some items may be too rare and have no active listings.\n\n"
-        "Example usage:\n"
-        f"{COMMAND_PREFIX}add_skin AWP | Safari Mesh (FT)\n"
+        "**Example usage:**\n"
+        f"```{COMMAND_PREFIX}add_skin AWP | Safari Mesh (FT)\n"
         f"{COMMAND_PREFIX}add_skin Souvenir SSG 08 | Prey (Battle-Scarred)\n"
         f"{COMMAND_PREFIX}add_skin StatTrak FAMAS | Meow 36 (MW)\n"
         f"{COMMAND_PREFIX}add_skin Revolution Case\n"
-        f"{COMMAND_PREFIX}add_skin `https://steamcommunity.com/market/listings/730/...`"
+        f"{COMMAND_PREFIX}add_skin https://steamcommunity.com/market/listings/730/...```"
     )
 
 
